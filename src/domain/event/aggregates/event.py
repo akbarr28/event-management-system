@@ -231,3 +231,39 @@ class Event:
         events = list(self._domain_events)
         self._domain_events.clear()
         return events
+
+    
+    # User Story - 06
+
+    def is_available_for_browsing(self) -> bool:
+        """BR-E06: Event hanya bisa dilihat customer jika statusnya PUBLISHED."""
+        return self.status == EventStatus.PUBLISHED
+
+    def get_lowest_ticket_price(self) -> Optional["Money"]:
+        """
+        BR-E06: Mengembalikan harga ticket terendah dari semua active ticket category.
+        Digunakan untuk menampilkan informasi harga ke customer.
+        Returns None jika tidak ada active ticket category.
+        """
+        active_prices = [
+            tc.price
+            for tc in self.ticket_categories
+            if tc.status == TicketCategoryStatus.ACTIVE
+        ]
+        if not active_prices:
+            return None
+        return min(active_prices, key=lambda m: m.amount)
+
+    def matches_date_filter(self, filter_date: datetime) -> bool:
+        """
+        BR-E06: Event cocok dengan date filter jika filter_date berada
+        di antara start_date dan end_date (inklusif).
+        """
+        return self.start_date.date() <= filter_date.date() <= self.end_date.date()
+
+    def matches_location_filter(self, location_keyword: str) -> bool:
+        """
+        BR-E06: Event cocok dengan location filter jika keyword terdapat
+        di dalam location string (case-insensitive).
+        """
+        return location_keyword.strip().lower() in self.location.lower()
