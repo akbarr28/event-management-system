@@ -7,6 +7,9 @@ from src.domain.event.value_objects.event_id import EventId
 from src.domain.event.value_objects.event_status import EventStatus
 from src.domain.event.value_objects.organizer_id import OrganizerId
 from src.domain.shared.exceptions.domain_exception import DomainException
+from src.domain.event.domain_events.ticket_category_created import TicketCategoryCreated
+from src.domain.event.entities.ticket_category import TicketCategory
+from src.domain.shared.value_objects.money import Money
 
 
 @dataclass
@@ -20,6 +23,7 @@ class Event:
     maximum_capacity: int
     organizer_id: OrganizerId
     status: EventStatus = field(default=EventStatus.DRAFT)
+    ticket_categories: List[TicketCategory] = field(default_factory=list)
     _domain_events: List = field(default_factory=list, init=False, repr=False)
 
     @staticmethod
@@ -66,6 +70,44 @@ class Event:
         )
 
         return event
+    
+    def add_ticket_category(
+        self,
+        name: str,
+        price: Money,
+        quota: int,
+        sales_start_date: datetime,
+        sales_end_date: datetime,
+    ) -> TicketCategory:
+        # BR-TC01: total quota semua category tidak boleh melebihi maximum_capacity
+        total_existing_quota = sum(tc.quota for tc in self.ticket_categories)
+        if total_existing_quota + quota > self.maximum_capacity:
+            raise DomainException(
+                "Total ticket category quota exceeds event maximum capacity."
+            )
+
+        ticket_category = TicketCategory.create(
+            event_id=self.id,
+            name=name,
+            price=price,
+            quota=quota,
+            sales_start_date=sales_start_date,
+            sales_end_date=sales_end_date,
+            event_start_date=self.start_date,
+        )
+
+        self.ticket_categories.append(ticket_category)
+
+        # Raise domain event TicketCategoryCreated
+        self._domain_events.append(
+            TicketCategoryCreated(
+                ticket_category_id=ticket_category.id,
+                event_id=self.id,
+                category_name=name,
+            )
+        )
+
+        return ticket_category
 
     def pull_domain_events(self) -> List:
         events = list(self._domain_events)
