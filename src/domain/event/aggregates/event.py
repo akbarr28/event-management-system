@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List, Optional
 
+from src.domain.event.domain_events.event_cancelled import EventCancelled
 from src.domain.event.domain_events.event_created import EventCreated
 from src.domain.event.domain_events.event_published import EventPublished
 from src.domain.event.domain_events.ticket_category_created import TicketCategoryCreated
@@ -30,7 +31,7 @@ class Event:
     ticket_categories: List[TicketCategory] = field(default_factory=list)
     _domain_events: List = field(default_factory=list, init=False, repr=False)
 
-    # User Story - 1
+    # User Story - 01
 
     @staticmethod
     def create(
@@ -115,6 +116,37 @@ class Event:
 
         self._domain_events.append(
             EventPublished(event_id=self.id)
+        )
+
+
+    # User Story - 03
+
+    def cancel(self) -> None:
+        # BR-E03: hanya event PUBLISHED yang bisa dibatalkan
+        if self.status == EventStatus.DRAFT:
+            raise DomainException(
+                "Draft event cannot be cancelled. Only published events can be cancelled."
+            )
+        if self.status == EventStatus.COMPLETED:
+            raise DomainException(
+                "Completed event cannot be cancelled."
+            )
+        if self.status == EventStatus.CANCELLED:
+            raise DomainException(
+                "Event is already cancelled."
+            )
+
+        # BR-E03: nonaktifkan semua ticket category agar tidak bisa dibeli
+        for tc in self.ticket_categories:
+            if tc.status == TicketCategoryStatus.ACTIVE:
+                tc.disable()
+
+        self.status = EventStatus.CANCELLED
+
+        # Raise EventCancelled — application layer akan handle marking refund
+        # untuk semua booking PAID terkait event ini
+        self._domain_events.append(
+            EventCancelled(event_id=self.id)
         )
 
 
