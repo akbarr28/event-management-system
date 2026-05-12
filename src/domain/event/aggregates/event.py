@@ -3,17 +3,17 @@ from datetime import datetime
 from typing import List, Optional
 
 from src.domain.event.domain_events.event_created import EventCreated
+from src.domain.event.domain_events.event_published import EventPublished
+from src.domain.event.domain_events.ticket_category_created import TicketCategoryCreated
+from src.domain.event.domain_events.ticket_category_disabled import TicketCategoryDisabled
+from src.domain.event.entities.ticket_category import TicketCategory
 from src.domain.event.value_objects.event_id import EventId
 from src.domain.event.value_objects.event_status import EventStatus
 from src.domain.event.value_objects.organizer_id import OrganizerId
-from src.domain.shared.exceptions.domain_exception import DomainException
-from src.domain.event.domain_events.ticket_category_created import TicketCategoryCreated
-from src.domain.event.entities.ticket_category import TicketCategory
-from src.domain.shared.value_objects.money import Money
-from src.domain.event.domain_events.ticket_category_disabled import TicketCategoryDisabled
 from src.domain.event.value_objects.ticket_category_id import TicketCategoryId
-
-
+from src.domain.event.value_objects.ticket_category_status import TicketCategoryStatus
+from src.domain.shared.exceptions.domain_exception import DomainException
+from src.domain.shared.value_objects.money import Money
 
 
 @dataclass
@@ -29,6 +29,8 @@ class Event:
     status: EventStatus = field(default=EventStatus.DRAFT)
     ticket_categories: List[TicketCategory] = field(default_factory=list)
     _domain_events: List = field(default_factory=list, init=False, repr=False)
+
+    # User Story - 1
 
     @staticmethod
     def create(
@@ -75,6 +77,49 @@ class Event:
 
         return event
     
+    # User Story - 02
+
+    def publish(self) -> None:
+        # BR-E02: hanya event DRAFT yang bisa dipublish
+        if self.status == EventStatus.CANCELLED:
+            raise DomainException(
+                "Cancelled event cannot be published."
+            )
+        if self.status == EventStatus.PUBLISHED:
+            raise DomainException(
+                "Event is already published."
+            )
+        if self.status == EventStatus.COMPLETED:
+            raise DomainException(
+                "Completed event cannot be published."
+            )
+
+        # BR-E02: harus ada minimal satu ticket category ACTIVE
+        active_categories = [
+            tc for tc in self.ticket_categories
+            if tc.status == TicketCategoryStatus.ACTIVE
+        ]
+        if not active_categories:
+            raise DomainException(
+                "Event must have at least one active ticket category before publishing."
+            )
+
+        # BR-E02: total quota tidak boleh melebihi maximum_capacity
+        total_quota = sum(tc.quota for tc in active_categories)
+        if total_quota > self.maximum_capacity:
+            raise DomainException(
+                "Total ticket quota exceeds event maximum capacity."
+            )
+
+        self.status = EventStatus.PUBLISHED
+
+        self._domain_events.append(
+            EventPublished(event_id=self.id)
+        )
+
+
+    # User Story - 04
+    
     def add_ticket_category(
         self,
         name: str,
@@ -112,6 +157,9 @@ class Event:
         )
 
         return ticket_category
+    
+
+    # User Story - 05
     
     def disable_ticket_category(
         self,
