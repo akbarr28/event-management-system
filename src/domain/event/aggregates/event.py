@@ -267,3 +267,15 @@ class Event:
         di dalam location string (case-insensitive).
         """
         return location_keyword.strip().lower() in self.location.lower()
+    
+    # User Story - 07
+
+    def get_active_ticket_categories_for_display(self) -> list:
+        """
+        BR-E07: Mengembalikan list ticket category yang aktif untuk ditampilkan
+        ke customer. Ticket category inactive tidak ditampilkan sama sekali.
+        """
+        return [
+            tc for tc in self.ticket_categories
+            if tc.status == TicketCategoryStatus.ACTIVE
+        ]

@@ -7,6 +7,7 @@ from src.domain.event.value_objects.ticket_category_id import TicketCategoryId
 from src.domain.event.value_objects.ticket_category_status import TicketCategoryStatus
 from src.domain.shared.exceptions.domain_exception import DomainException
 from src.domain.shared.value_objects.money import Money
+from src.domain.event.value_objects.ticket_category_display_status import TicketCategoryDisplayStatus
 
 
 @dataclass
@@ -87,3 +88,15 @@ class TicketCategory:
             self.status == TicketCategoryStatus.ACTIVE
             and self.remaining_quota > 0
         )
+    
+    # User Story - 07
+
+    def get_display_status(self, now: datetime) -> TicketCategoryDisplayStatus:
+        
+        if self.remaining_quota <= 0:
+            return TicketCategoryDisplayStatus.SOLD_OUT
+        if now < self.sales_start_date:
+            return TicketCategoryDisplayStatus.COMING_SOON
+        if now > self.sales_end_date:
+            return TicketCategoryDisplayStatus.SALES_CLOSED
+        return TicketCategoryDisplayStatus.AVAILABLE
