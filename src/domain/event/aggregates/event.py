@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from src.domain.event.domain_events.event_created import EventCreated
 from src.domain.event.value_objects.event_id import EventId
@@ -10,6 +10,10 @@ from src.domain.shared.exceptions.domain_exception import DomainException
 from src.domain.event.domain_events.ticket_category_created import TicketCategoryCreated
 from src.domain.event.entities.ticket_category import TicketCategory
 from src.domain.shared.value_objects.money import Money
+from src.domain.event.domain_events.ticket_category_disabled import TicketCategoryDisabled
+from src.domain.event.value_objects.ticket_category_id import TicketCategoryId
+
+
 
 
 @dataclass
@@ -108,6 +112,40 @@ class Event:
         )
 
         return ticket_category
+    
+    def disable_ticket_category(
+        self,
+        ticket_category_id: TicketCategoryId,
+    ) -> None:
+        # BR-TC02: event tidak boleh berstatus COMPLETED
+        if self.status == EventStatus.COMPLETED:
+            raise DomainException(
+                "Cannot disable ticket category of a completed event."
+            )
+
+        # Cari ticket category berdasarkan ID
+        category = self._find_ticket_category(ticket_category_id)
+        if category is None:
+            raise DomainException("Ticket category not found.")
+
+        # Delegate ke entity untuk ubah statusnya
+        category.disable()
+
+        self._domain_events.append(
+            TicketCategoryDisabled(
+                ticket_category_id=ticket_category_id,
+                event_id=self.id,
+            )
+        )
+
+    def _find_ticket_category(
+        self,
+        ticket_category_id: TicketCategoryId,
+    ) -> Optional[TicketCategory]:
+        for tc in self.ticket_categories:
+            if tc.id == ticket_category_id:
+                return tc
+        return None
 
     def pull_domain_events(self) -> List:
         events = list(self._domain_events)
