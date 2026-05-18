@@ -7,6 +7,7 @@ from src.domain.booking.value_objects.booking_status import BookingStatus
 from src.domain.booking.value_objects.customer_id import CustomerId
 from src.domain.event.value_objects.event_status import EventStatus
 from src.domain.refund.domain_events.refund_approved import RefundApproved
+from src.domain.refund.domain_events.refund_rejected import RefundRejected
 from src.domain.refund.domain_events.refund_requested import RefundRequested
 from src.domain.refund.value_objects.refund_id import RefundId
 from src.domain.refund.value_objects.refund_status import RefundStatus
@@ -108,6 +109,39 @@ class Refund:
             )
         )
 
+    # User Story - 17
+
+    def reject(self, rejection_reason: str) -> None:
+        """
+        BR-R03: Menolak permintaan refund.
+        - Refund harus berstatus REQUESTED
+        - Alasan penolakan wajib diisi
+        - Booking tetap PAID, tiket tetap ACTIVE
+        """
+        # BR-R03: refund harus berstatus REQUESTED
+        if self.status != RefundStatus.REQUESTED:
+            raise DomainException(
+                "Refund can only be rejected if its status is Requested."
+            )
+
+        # BR-R03: alasan penolakan wajib diisi
+        if not rejection_reason or not rejection_reason.strip():
+            raise DomainException(
+                "Rejection reason must be provided."
+            )
+
+        self.status = RefundStatus.REJECTED
+        self.rejection_reason = rejection_reason
+
+        self._domain_events.append(
+            RefundRejected(
+                refund_id=self.id,
+                booking_id=self.booking_id,
+                rejection_reason=rejection_reason,
+            )
+        )
+
+    # Helpers
     def pull_domain_events(self) -> List:
         events = list(self._domain_events)
         self._domain_events.clear()
