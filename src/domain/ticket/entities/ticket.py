@@ -1,11 +1,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 
 from src.domain.booking.value_objects.booking_id import BookingId
 from src.domain.booking.value_objects.customer_id import CustomerId
 from src.domain.event.value_objects.event_id import EventId
+from src.domain.event.value_objects.event_status import EventStatus
 from src.domain.event.value_objects.ticket_category_id import TicketCategoryId
 from src.domain.shared.exceptions.domain_exception import DomainException
 from src.domain.ticket.domain_events.ticket_checked_in import TicketCheckedIn
@@ -62,8 +63,24 @@ class Ticket:
             raise DomainException("Checked-in ticket cannot be cancelled.")
         self.status = TicketStatus.CANCELLED
 
-    # User Story - 13
-    def check_in(self, event_id: EventId, check_in_time: datetime) -> None:
+    # User Story - 13 dan 14
+    def validate_code_exists(ticket: Optional["Ticket"]) -> "Ticket":
+        """
+        BR-T14: Validasi bahwa tiket dengan kode tersebut ditemukan.
+        Dipanggil setelah repository mencoba find_by_code().
+        """
+        if ticket is None:
+            raise DomainException(
+                "Ticket is invalid. Ticket code not found."
+            )
+        return ticket
+
+    def check_in(
+        self,
+        event_id: EventId,
+        event_status: EventStatus,
+        check_in_time: datetime,
+    ) -> None:
         """
         BR-T13: Check-in tiket saat peserta memasuki venue event.
         - Tiket harus berstatus ACTIVE
@@ -84,6 +101,12 @@ class Ticket:
         if self.event_id != event_id:
             raise DomainException(
                 "Ticket does not match the event."
+            )
+        
+         # BR-T14: event tidak boleh berstatus CANCELLED
+        if event_status == EventStatus.CANCELLED:
+            raise DomainException(
+                "Event has been cancelled."
             )
 
         self.status = TicketStatus.CHECKED_IN
