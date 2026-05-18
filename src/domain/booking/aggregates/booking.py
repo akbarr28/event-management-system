@@ -76,3 +76,22 @@ class Booking:
         events = list(self._domain_events)
         self._domain_events.clear()
         return events
+    
+    # User Story - 09
+
+    def calculate_total_price(self, service_fee: Money = None) -> Money:
+        """
+        BR-B09: Menghitung total price booking.
+        - Total = unit price x quantity
+        - Jika ada service fee, ditambahkan ke total
+        - Total tidak boleh negatif
+        """
+        total = self.unit_price.multiply(self.quantity)
+
+        if service_fee is not None:
+            total = total.add(service_fee)
+
+        if total.amount < 0:
+            raise DomainException("Total price cannot be negative.")
+
+        return total
