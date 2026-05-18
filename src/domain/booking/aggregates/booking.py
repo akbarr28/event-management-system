@@ -10,6 +10,7 @@ from src.domain.event.value_objects.event_id import EventId
 from src.domain.event.value_objects.ticket_category_id import TicketCategoryId
 from src.domain.shared.exceptions.domain_exception import DomainException
 from src.domain.shared.value_objects.money import Money
+from src.domain.booking.domain_events.booking_paid import BookingPaid
 
 PAYMENT_DEADLINE_MINUTES = 15
 
@@ -95,3 +96,41 @@ class Booking:
             raise DomainException("Total price cannot be negative.")
 
         return total
+    
+    # User Story - 10
+
+    def pay(self, payment_amount: Money, now: datetime) -> None:
+        """
+        BR-B10: Memproses pembayaran booking.
+        - Booking harus berstatus PendingPayment
+        - Pembayaran tidak boleh melewati payment deadline
+        - Jumlah pembayaran harus sama dengan total price
+        """
+        # BR-B10-01: hanya PendingPayment yang bisa dibayar
+        if self.status != BookingStatus.PENDING_PAYMENT:
+            raise DomainException(
+                "Only bookings with status PendingPayment can be paid."
+            )
+
+        # BR-B10-02: tidak boleh melewati payment deadline
+        if now > self.payment_deadline:
+            raise DomainException(
+                "Payment deadline has passed. Booking cannot be paid."
+            )
+
+        # BR-B10-03: jumlah pembayaran harus sama dengan total price
+        if payment_amount != self.total_price:
+            raise DomainException(
+                "Payment amount does not match the total booking price."
+            )
+
+        self.status = BookingStatus.PAID
+
+        self._domain_events.append(
+            BookingPaid(
+                booking_id=self.id,
+                customer_id=self.customer_id,
+                event_id=self.event_id,
+                amount_paid=payment_amount,
+            )
+        )
