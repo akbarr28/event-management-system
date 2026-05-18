@@ -6,6 +6,7 @@ from src.domain.booking.value_objects.booking_id import BookingId
 from src.domain.booking.value_objects.booking_status import BookingStatus
 from src.domain.booking.value_objects.customer_id import CustomerId
 from src.domain.event.value_objects.event_status import EventStatus
+from src.domain.refund.domain_events.refund_approved import RefundApproved
 from src.domain.refund.domain_events.refund_requested import RefundRequested
 from src.domain.refund.value_objects.refund_id import RefundId
 from src.domain.refund.value_objects.refund_status import RefundStatus
@@ -83,6 +84,29 @@ class Refund:
         )
 
         return refund
+    
+    # User Story - 16
+
+    def approve(self) -> None:
+        """
+        BR-R02: Menyetujui permintaan refund.
+        - Refund harus berstatus REQUESTED
+        - Status berubah menjadi APPROVED
+        - Application layer yang akan cancel tiket & mark booking refunded
+        """
+        if self.status != RefundStatus.REQUESTED:
+            raise DomainException(
+                "Refund can only be approved if its status is Requested."
+            )
+
+        self.status = RefundStatus.APPROVED
+
+        self._domain_events.append(
+            RefundApproved(
+                refund_id=self.id,
+                booking_id=self.booking_id,
+            )
+        )
 
     def pull_domain_events(self) -> List:
         events = list(self._domain_events)

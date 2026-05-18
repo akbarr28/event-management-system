@@ -202,3 +202,16 @@ class Booking:
             tickets.append(ticket)
 
         return tickets
+    
+    # User Story - 16
+
+    def mark_refunded(self) -> None:
+        """
+        BR-R02: Menandai booking sebagai Refunded setelah refund disetujui.
+        - Booking harus berstatus PAID
+        """
+        if self.status != BookingStatus.PAID:
+            raise DomainException(
+                "Only paid bookings can be marked as refunded."
+            )
+        self.status = BookingStatus.REFUNDED
