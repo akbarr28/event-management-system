@@ -12,6 +12,7 @@ from src.domain.shared.exceptions.domain_exception import DomainException
 from src.domain.shared.value_objects.money import Money
 from src.domain.booking.domain_events.booking_paid import BookingPaid
 from src.domain.booking.domain_events.booking_expired import BookingExpired
+from typing import List
 
 PAYMENT_DEADLINE_MINUTES = 15
 
@@ -173,3 +174,31 @@ class Booking:
                 quantity=self.quantity,
             )
         )
+
+        # User Story - 12
+
+    def issue_tickets(self) -> list:
+        """
+        BR-T12: Menerbitkan tickets setelah booking dibayar.
+        - Hanya booking Paid yang bisa menerbitkan tickets
+        - Jumlah ticket = quantity booking
+        - Setiap ticket memiliki unique ticket code
+        """
+        from src.domain.ticket.entities.ticket import Ticket
+
+        if self.status != BookingStatus.PAID:
+            raise DomainException(
+                "Tickets can only be issued for paid bookings."
+            )
+
+        tickets = []
+        for _ in range(self.quantity):
+            ticket = Ticket.create(
+                booking_id=self.id,
+                customer_id=self.customer_id,
+                event_id=self.event_id,
+                ticket_category_id=self.ticket_category_id,
+            )
+            tickets.append(ticket)
+
+        return tickets
