@@ -11,6 +11,7 @@ from src.domain.event.value_objects.ticket_category_id import TicketCategoryId
 from src.domain.shared.exceptions.domain_exception import DomainException
 from src.domain.shared.value_objects.money import Money
 from src.domain.booking.domain_events.booking_paid import BookingPaid
+from src.domain.booking.domain_events.booking_expired import BookingExpired
 
 PAYMENT_DEADLINE_MINUTES = 15
 
@@ -132,5 +133,43 @@ class Booking:
                 customer_id=self.customer_id,
                 event_id=self.event_id,
                 amount_paid=payment_amount,
+            )
+        )
+
+        # User Story - 11
+
+    def expire(self, now: datetime) -> None:
+        """
+        BR-B11: Menandai booking sebagai Expired.
+        - Hanya booking PendingPayment yang bisa di-expire
+        - Booking Paid tidak bisa di-expire
+        - Payment deadline harus sudah lewat
+        """
+        # BR-B11-01: hanya PendingPayment yang bisa di-expire
+        if self.status == BookingStatus.PAID:
+            raise DomainException(
+                "Paid booking cannot be expired."
+            )
+
+        if self.status != BookingStatus.PENDING_PAYMENT:
+            raise DomainException(
+                "Only bookings with status PendingPayment can be expired."
+            )
+
+        # BR-B11-02: payment deadline harus sudah lewat
+        if now <= self.payment_deadline:
+            raise DomainException(
+                "Booking cannot be expired before payment deadline has passed."
+            )
+
+        self.status = BookingStatus.EXPIRED
+
+        self._domain_events.append(
+            BookingExpired(
+                booking_id=self.id,
+                customer_id=self.customer_id,
+                event_id=self.event_id,
+                ticket_category_id=self.ticket_category_id,
+                quantity=self.quantity,
             )
         )
