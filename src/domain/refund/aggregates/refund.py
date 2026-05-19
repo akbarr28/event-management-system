@@ -7,6 +7,7 @@ from src.domain.booking.value_objects.booking_status import BookingStatus
 from src.domain.booking.value_objects.customer_id import CustomerId
 from src.domain.event.value_objects.event_status import EventStatus
 from src.domain.refund.domain_events.refund_approved import RefundApproved
+from src.domain.refund.domain_events.refund_paid_out import RefundPaidOut
 from src.domain.refund.domain_events.refund_rejected import RefundRejected
 from src.domain.refund.domain_events.refund_requested import RefundRequested
 from src.domain.refund.value_objects.refund_id import RefundId
@@ -138,6 +139,38 @@ class Refund:
                 refund_id=self.id,
                 booking_id=self.booking_id,
                 rejection_reason=rejection_reason,
+            )
+        )
+
+    # User Story - 18
+
+    def mark_paid_out(self, payment_reference: str) -> None:
+        """
+        BR-R04: Menandai refund sebagai sudah dibayarkan.
+        - Refund harus berstatus APPROVED
+        - Payment reference wajib dicatat
+        - Setelah PAID_OUT tidak bisa diubah lagi
+        """
+        # BR-R04: refund harus berstatus APPROVED
+        if self.status != RefundStatus.APPROVED:
+            raise DomainException(
+                "Refund can only be marked as paid out if its status is Approved."
+            )
+
+        # BR-R04: payment reference wajib diisi
+        if not payment_reference or not payment_reference.strip():
+            raise DomainException(
+                "Payment reference must be provided."
+            )
+
+        self.status = RefundStatus.PAID_OUT
+        self.payment_reference = payment_reference
+
+        self._domain_events.append(
+            RefundPaidOut(
+                refund_id=self.id,
+                booking_id=self.booking_id,
+                payment_reference=payment_reference,
             )
         )
 
