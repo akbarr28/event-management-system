@@ -29,3 +29,7 @@ class IBookingRepository(ABC):
     @abstractmethod
     async def find_by_customer_id(self, customer_id: CustomerId) -> List[Booking]:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def find_by_event_id(self, event_id: EventId) -> List[Booking]:
+        raise NotImplementedError
