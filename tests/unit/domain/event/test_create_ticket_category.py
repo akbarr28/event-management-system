@@ -33,7 +33,7 @@ def valid_category_data(base_event):
         "price": Money(Decimal("150000"), "IDR"),
         "quota": 100,
         "sales_start_date": now + timedelta(days=1),
-        "sales_end_date": now + timedelta(days=25),   # sebelum event start
+        "sales_end_date": now + timedelta(days=25),   
     }
 
 
@@ -53,7 +53,7 @@ def test_add_ticket_category_success(base_event, valid_category_data):
 
 def test_add_ticket_category_raises_domain_event(base_event, valid_category_data):
     """Sistem harus raise domain event TicketCategoryCreated."""
-    # Bersihkan EventCreated dari create()
+
     base_event.pull_domain_events()
 
     base_event.add_ticket_category(**valid_category_data)
@@ -160,7 +160,7 @@ def test_add_ticket_category_fails_when_total_quota_exceeds_capacity(base_event)
     sales_start = now + timedelta(days=1)
     sales_end = now + timedelta(days=25)
 
-    # Tambah category pertama quota 400
+  
     base_event.add_ticket_category(
         name="Regular",
         price=Money(Decimal("150000"), "IDR"),
@@ -169,7 +169,6 @@ def test_add_ticket_category_fails_when_total_quota_exceeds_capacity(base_event)
         sales_end_date=sales_end,
     )
 
-    # Tambah category kedua quota 200 → total 600 > 500 (maximum_capacity)
     with pytest.raises(DomainException) as exc_info:
         base_event.add_ticket_category(
             name="VIP",
