@@ -6,6 +6,7 @@ from src.domain.booking.value_objects.customer_id import CustomerId
 from src.domain.ticket.entities.ticket import Ticket
 from src.domain.ticket.value_objects.ticket_id import TicketId
 from src.domain.ticket.value_objects.ticket_code import TicketCode
+from src.domain.event.value_objects.event_id import EventId
 
 
 class ITicketRepository(ABC):
@@ -34,4 +35,7 @@ class ITicketRepository(ABC):
     async def find_paid_tickets_by_customer(
         self, customer_id: CustomerId
     ) -> List[Ticket]:
+        raise NotImplementedError
+    @abstractmethod
+    async def find_paid_tickets_by_event(self, event_id: EventId) -> List[Ticket]:
         raise NotImplementedError
