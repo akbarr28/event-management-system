@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from decimal import Decimal
 
-
 class PaymentResult:
     def __init__(self, success: bool, reference: str, message: str = ""):
         self.success = success
