@@ -13,7 +13,8 @@ from src.domain.ticket.value_objects.ticket_status import TicketStatus
 class CheckInTicketHandler:
     """
     Command Handler untuk US-13 & US-14: Check In Ticket.
-    Memvalidasi tiket dan melakukan check-in peserta.
+    Validasi bisnis didelegasikan ke domain layer (ticket.check_in()).
+    Handler hanya bertanggung jawab mengambil data dan mengkoordinasikan.
     """
 
     def __init__(
@@ -62,6 +63,12 @@ class CheckInTicketHandler:
                 "Check-in is only allowed on the event day."
             )
 
-        ticket.check_in()
+        ticket.check_in(
+            event_id=event_id,
+            event_status=event.status,
+            check_in_time=now,
+        )
 
         await self._ticket_repository.save(ticket)
+
+        ticket.pull_domain_events()
