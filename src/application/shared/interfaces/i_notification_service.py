@@ -44,3 +44,10 @@ class INotificationService(ABC):
         event_name: str,
     ) -> None:
         raise NotImplementedError
+    
+    @abstractmethod
+    async def notify_event_published(
+        self,
+        event,  # Event aggregate
+    ) -> None:
+        raise NotImplementedError
