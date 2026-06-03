@@ -16,8 +16,6 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Alembic
-alembic.ini
 
 # OS
 .DS_Store
