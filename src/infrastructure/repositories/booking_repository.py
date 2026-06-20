@@ -43,7 +43,12 @@ class BookingRepository(IBookingRepository):
             select(BookingModel)
             .where(BookingModel.customer_id == customer_id.value)
             .where(BookingModel.event_id == event_id.value)
-            .where(BookingModel.status == BookingStatus.PENDING_PAYMENT.value)
+            .where(
+                BookingModel.status.in_([
+                BookingStatus.PENDING_PAYMENT.value,
+                BookingStatus.PAID.value,
+                ])
+            )
         )
         result = await self._session.execute(stmt)
         row = result.scalar_one_or_none()

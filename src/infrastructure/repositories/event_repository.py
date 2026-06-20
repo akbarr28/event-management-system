@@ -22,7 +22,6 @@ class EventRepository(IEventRepository):
     def __init__(self, session: AsyncSession):
         self._session = session
 
-    # ---------- save ----------
 
     async def save(self, event: Event) -> None:
         existing = await self._session.get(EventModel, event.id.value)
@@ -32,11 +31,9 @@ class EventRepository(IEventRepository):
             self._session.add(model)
         else:
             self._update_model(existing, event)
-            # sync ticket categories
             existing_tc_ids = {tc.id for tc in existing.ticket_categories}
             domain_tc_ids = {tc.id.value for tc in event.ticket_categories}
 
-            # delete removed
             for tc_model in list(existing.ticket_categories):
                 if tc_model.id not in domain_tc_ids:
                     await self._session.delete(tc_model)
@@ -51,7 +48,6 @@ class EventRepository(IEventRepository):
 
         await self._session.flush()
 
-    # ---------- find_by_id ----------
 
     async def find_by_id(self, event_id: EventId) -> Optional[Event]:
         result = await self._session.get(EventModel, event_id.value)
@@ -59,7 +55,6 @@ class EventRepository(IEventRepository):
             return None
         return self._to_domain(result)
 
-    # ---------- find_published ----------
 
     async def find_published(self) -> List[Event]:
         stmt = select(EventModel).where(EventModel.status == "PUBLISHED")
@@ -67,7 +62,6 @@ class EventRepository(IEventRepository):
         rows = result.scalars().all()
         return [self._to_domain(row) for row in rows]
 
-    # ---------- mapping helpers ----------
 
     def _to_model(self, event: Event) -> EventModel:
         model = EventModel(
