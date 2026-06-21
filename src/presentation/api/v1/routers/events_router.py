@@ -8,6 +8,8 @@ from src.application.event.commands.create_event_handler import CreateEventHandl
 from src.domain.shared.exceptions.domain_exception import DomainException
 from src.infrastructure.database.connection import get_db_session
 from src.infrastructure.repositories.event_repository import EventRepository
+from src.application.event.commands.publish_event import PublishEventCommand
+from src.application.event.commands.publish_event_handler import PublishEventHandler
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -25,6 +27,9 @@ class CreateEventRequest(BaseModel):
     end_date: datetime
     location: str
     maximum_capacity: int
+    organizer_id: str
+
+class PublishEventRequest(BaseModel):
     organizer_id: str
 
 
@@ -45,6 +50,28 @@ async def create_event(
         end_date=body.end_date,
         location=body.location,
         maximum_capacity=body.maximum_capacity,
+        organizer_id=body.organizer_id,
+    )
+    try:
+        result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    
+
+@router.post("/{event_id}/publish", status_code=200)
+async def publish_event(
+    event_id: str,
+    body: PublishEventRequest,
+    event_repo: EventRepository = Depends(get_event_repository),
+):
+    """
+    US-02: Publish Event
+    Event Organizer mempublish event Draft agar bisa dilihat customer.
+    """
+    handler = PublishEventHandler(event_repository=event_repo)
+    command = PublishEventCommand(
+        event_id=event_id,
         organizer_id=body.organizer_id,
     )
     try:
