@@ -15,6 +15,8 @@ from src.application.event.commands.cancel_event_handler import CancelEventHandl
 from decimal import Decimal
 from src.application.event.commands.create_ticket_category import CreateTicketCategoryCommand
 from src.application.event.commands.create_ticket_category_handler import CreateTicketCategoryHandler
+from src.application.event.commands.disable_ticket_category import DisableTicketCategoryCommand
+from src.application.event.commands.disable_ticket_category_handler import DisableTicketCategoryHandler
 
 
 
@@ -51,6 +53,8 @@ class CreateTicketCategoryRequest(BaseModel):
     sales_start_date: datetime
     sales_end_date: datetime
 
+class DisableTicketCategoryRequest(BaseModel):
+    organizer_id: str
 
 @router.post("/", status_code=201)
 async def create_event(
@@ -140,6 +144,29 @@ async def create_ticket_category(
         quota=body.quota,
         sales_start_date=body.sales_start_date,
         sales_end_date=body.sales_end_date,
+    )
+    try:
+        result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    
+@router.post("/{event_id}/ticket-categories/{ticket_category_id}/disable", status_code=200)
+async def disable_ticket_category(
+    event_id: str,
+    ticket_category_id: str,
+    body: DisableTicketCategoryRequest,
+    event_repo: EventRepository = Depends(get_event_repository),
+):
+    """
+    US-05: Disable Ticket Category
+    Event Organizer menonaktifkan ticket category agar tidak bisa dibeli.
+    """
+    handler = DisableTicketCategoryHandler(event_repository=event_repo)
+    command = DisableTicketCategoryCommand(
+        event_id=event_id,
+        organizer_id=body.organizer_id,
+        ticket_category_id=ticket_category_id,
     )
     try:
         result = await handler.handle(command)
