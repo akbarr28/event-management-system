@@ -10,6 +10,9 @@ from src.infrastructure.database.connection import get_db_session
 from src.infrastructure.repositories.event_repository import EventRepository
 from src.application.event.commands.publish_event import PublishEventCommand
 from src.application.event.commands.publish_event_handler import PublishEventHandler
+from src.application.event.commands.cancel_event import CancelEventCommand
+from src.application.event.commands.cancel_event_handler import CancelEventHandler
+
 
 router = APIRouter(prefix="/events", tags=["Events"])
 
@@ -32,6 +35,8 @@ class CreateEventRequest(BaseModel):
 class PublishEventRequest(BaseModel):
     organizer_id: str
 
+class CancelEventRequest(BaseModel):
+    organizer_id: str
 
 @router.post("/", status_code=201)
 async def create_event(
@@ -71,6 +76,27 @@ async def publish_event(
     """
     handler = PublishEventHandler(event_repository=event_repo)
     command = PublishEventCommand(
+        event_id=event_id,
+        organizer_id=body.organizer_id,
+    )
+    try:
+        result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    
+@router.post("/{event_id}/cancel", status_code=200)
+async def cancel_event(
+    event_id: str,
+    body: CancelEventRequest,
+    event_repo: EventRepository = Depends(get_event_repository),
+):
+    """
+    US-03: Cancel Event
+    Event Organizer membatalkan event Published.
+    """
+    handler = CancelEventHandler(event_repository=event_repo)
+    command = CancelEventCommand(
         event_id=event_id,
         organizer_id=body.organizer_id,
     )
