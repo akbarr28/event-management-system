@@ -12,6 +12,10 @@ from src.application.event.commands.publish_event import PublishEventCommand
 from src.application.event.commands.publish_event_handler import PublishEventHandler
 from src.application.event.commands.cancel_event import CancelEventCommand
 from src.application.event.commands.cancel_event_handler import CancelEventHandler
+from decimal import Decimal
+from src.application.event.commands.create_ticket_category import CreateTicketCategoryCommand
+from src.application.event.commands.create_ticket_category_handler import CreateTicketCategoryHandler
+
 
 
 router = APIRouter(prefix="/events", tags=["Events"])
@@ -37,6 +41,16 @@ class PublishEventRequest(BaseModel):
 
 class CancelEventRequest(BaseModel):
     organizer_id: str
+
+class CreateTicketCategoryRequest(BaseModel):
+    organizer_id: str
+    name: str
+    price: Decimal
+    currency: str = "IDR"
+    quota: int
+    sales_start_date: datetime
+    sales_end_date: datetime
+
 
 @router.post("/", status_code=201)
 async def create_event(
@@ -99,6 +113,33 @@ async def cancel_event(
     command = CancelEventCommand(
         event_id=event_id,
         organizer_id=body.organizer_id,
+    )
+    try:
+        result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    
+@router.post("/{event_id}/ticket-categories", status_code=201)
+async def create_ticket_category(
+    event_id: str,
+    body: CreateTicketCategoryRequest,
+    event_repo: EventRepository = Depends(get_event_repository),
+):
+    """
+    US-04: Create Ticket Category
+    Event Organizer menambahkan kategori tiket ke event.
+    """
+    handler = CreateTicketCategoryHandler(event_repository=event_repo)
+    command = CreateTicketCategoryCommand(
+        event_id=event_id,
+        organizer_id=body.organizer_id,
+        name=body.name,
+        price=body.price,
+        currency=body.currency,
+        quota=body.quota,
+        sales_start_date=body.sales_start_date,
+        sales_end_date=body.sales_end_date,
     )
     try:
         result = await handler.handle(command)
