@@ -13,6 +13,8 @@ from src.infrastructure.repositories.event_repository import EventRepository
 from src.application.booking.commands.pay_booking import PayBookingCommand
 from src.application.booking.commands.pay_booking_handler import PayBookingHandler
 from src.infrastructure.repositories.ticket_repository import TicketRepository
+from src.application.booking.commands.expire_booking import ExpireBookingCommand
+from src.application.booking.commands.expire_booking_handler import ExpireBookingHandler
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -120,6 +122,28 @@ async def pay_booking(
         payment_amount=body.payment_amount,
         currency=body.currency,
     )
+    try:
+        result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    
+@router.post("/{booking_id}/expire", status_code=200)
+async def expire_booking(
+    booking_id: str,
+    booking_repo: BookingRepository = Depends(get_booking_repository),
+    event_repo: EventRepository = Depends(get_event_repository),
+):
+    """
+    US-11: Expire Booking
+    System menandai booking PendingPayment sebagai Expired setelah deadline lewat.
+    Quota yang direservasi dilepas kembali.
+    """
+    handler = ExpireBookingHandler(
+        booking_repository=booking_repo,
+        event_repository=event_repo,
+    )
+    command = ExpireBookingCommand(booking_id=booking_id)
     try:
         result = await handler.handle(command)
         return result
