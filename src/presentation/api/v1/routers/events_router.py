@@ -20,6 +20,9 @@ from src.application.event.commands.disable_ticket_category_handler import Disab
 from typing import Optional
 from src.application.event.queries.get_available_events import GetAvailableEventsQuery
 from src.application.event.queries.get_available_events_handler import GetAvailableEventsHandler
+from fastapi import APIRouter, Depends, HTTPException, Query
+from src.application.event.queries.get_event_detail import GetEventDetailQuery
+from src.application.event.queries.get_event_detail_handler import GetEventDetailHandler
 
 
 
@@ -191,6 +194,26 @@ async def get_available_events(
     query = GetAvailableEventsQuery(
         filter_date=filter_date,
         filter_location=filter_location,
+    )
+    try:
+        result = await handler.handle(query)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+@router.get("/{event_id}", status_code=200)
+async def get_event_detail(
+    event_id: str,
+    event_repo: EventRepository = Depends(get_event_repository),
+):
+    """
+    US-07: View Event Detail
+    Customer melihat detail event beserta ticket categories dan availability-nya.
+    """
+    handler = GetEventDetailHandler(event_repository=event_repo)
+    query = GetEventDetailQuery(
+        event_id=event_id,
+        now=datetime.utcnow(),
     )
     try:
         result = await handler.handle(query)
