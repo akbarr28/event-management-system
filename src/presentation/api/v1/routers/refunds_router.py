@@ -163,3 +163,36 @@ async def reject_refund(
     except DomainException as e:
         raise HTTPException(status_code=422, detail=str(e))
 
+
+# US-18 
+
+class MarkRefundPaidOutRequest(BaseModel):
+    payment_reference: str
+
+
+@router.post("/{refund_id}/paid-out", status_code=200)
+async def mark_refund_paid_out(
+    refund_id: str,
+    body: MarkRefundPaidOutRequest,
+    refund_repo: RefundRepository = Depends(get_refund_repository),
+    refund_payment_service: ConsoleRefundPaymentService = Depends(get_refund_payment_service),
+):
+    """
+    US-18: Mark Refund as Paid Out
+    System Admin menandai refund sebagai sudah dibayarkan ke customer.
+    """
+    handler = MarkRefundPaidOutHandler(
+        refund_repository=refund_repo,
+        refund_payment_service=refund_payment_service,
+    )
+    command = MarkRefundPaidOutCommand(
+        refund_id=refund_id,
+        payment_reference=body.payment_reference,
+    )
+    try:
+        result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
