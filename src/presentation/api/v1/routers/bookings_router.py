@@ -10,6 +10,9 @@ from src.domain.shared.exceptions.domain_exception import DomainException
 from src.infrastructure.database.connection import get_db_session
 from src.infrastructure.repositories.booking_repository import BookingRepository
 from src.infrastructure.repositories.event_repository import EventRepository
+from src.application.booking.commands.pay_booking import PayBookingCommand
+from src.application.booking.commands.pay_booking_handler import PayBookingHandler
+from src.infrastructure.repositories.ticket_repository import TicketRepository
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -24,6 +27,17 @@ async def get_booking_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> BookingRepository:
     return BookingRepository(session)
+
+async def get_ticket_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> TicketRepository:
+    return TicketRepository(session)
+
+
+class PayBookingRequest(BaseModel):
+    customer_id: str
+    payment_amount: Decimal
+    currency: str = "IDR"
 
 
 class CreateBookingRequest(BaseModel):
@@ -81,5 +95,33 @@ async def get_booking_total_price(
             "total_price": str(total.amount),
             "currency": total.currency,
         }
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    
+@router.post("/{booking_id}/pay", status_code=200)
+async def pay_booking(
+    booking_id: str,
+    body: PayBookingRequest,
+    booking_repo: BookingRepository = Depends(get_booking_repository),
+    ticket_repo: TicketRepository = Depends(get_ticket_repository),
+):
+    """
+    US-10: Pay Booking
+    Customer membayar booking dengan jumlah yang sesuai total price.
+    Setelah berhasil, ticket diterbitkan otomatis.
+    """
+    handler = PayBookingHandler(
+        booking_repository=booking_repo,
+        ticket_repository=ticket_repo,
+    )
+    command = PayBookingCommand(
+        booking_id=booking_id,
+        customer_id=body.customer_id,
+        payment_amount=body.payment_amount,
+        currency=body.currency,
+    )
+    try:
+        result = await handler.handle(command)
+        return result
     except DomainException as e:
         raise HTTPException(status_code=422, detail=str(e))
