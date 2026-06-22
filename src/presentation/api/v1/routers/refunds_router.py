@@ -128,3 +128,38 @@ async def approve_refund(
     except DomainException as e:
         raise HTTPException(status_code=422, detail=str(e))
 
+
+# US-17 
+
+class RejectRefundRequest(BaseModel):
+    organizer_id: str
+    rejection_reason: str
+
+
+@router.post("/{refund_id}/reject", status_code=200)
+async def reject_refund(
+    refund_id: str,
+    body: RejectRefundRequest,
+    refund_repo: RefundRepository = Depends(get_refund_repository),
+    notification_service: ConsoleNotificationService = Depends(get_notification_service),
+):
+    """
+    US-17: Reject Refund
+    Event Organizer menolak permintaan refund dengan alasan yang wajib diisi.
+    Booking tetap Paid, tiket tetap Active.
+    """
+    handler = RejectRefundHandler(
+        refund_repository=refund_repo,
+        notification_service=notification_service,
+    )
+    command = RejectRefundCommand(
+        refund_id=refund_id,
+        organizer_id=body.organizer_id,
+        rejection_reason=body.rejection_reason,
+    )
+    try:
+        result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
