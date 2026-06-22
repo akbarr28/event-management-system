@@ -58,3 +58,28 @@ async def create_booking(
         return result
     except DomainException as e:
         raise HTTPException(status_code=422, detail=str(e))
+    
+@router.get("/{booking_id}/total-price", status_code=200)
+async def get_booking_total_price(
+    booking_id: str,
+    booking_repo: BookingRepository = Depends(get_booking_repository),
+):
+    """
+    US-09: Calculate Booking Total Price
+    Customer melihat total harga booking sebelum bayar.
+    """
+    from src.domain.booking.value_objects.booking_id import BookingId
+    try:
+        booking = await booking_repo.find_by_id(BookingId.from_string(booking_id))
+        if booking is None:
+            raise HTTPException(status_code=404, detail="Booking not found.")
+        total = booking.calculate_total_price()
+        return {
+            "booking_id": booking_id,
+            "unit_price": str(booking.unit_price.amount),
+            "quantity": booking.quantity,
+            "total_price": str(total.amount),
+            "currency": total.currency,
+        }
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
