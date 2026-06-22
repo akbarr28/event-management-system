@@ -90,3 +90,41 @@ async def request_refund(
         return result
     except DomainException as e:
         raise HTTPException(status_code=422, detail=str(e))
+    
+
+# US-16 
+
+class ApproveRefundRequest(BaseModel):
+    organizer_id: str
+
+
+@router.post("/{refund_id}/approve", status_code=200)
+async def approve_refund(
+    refund_id: str,
+    body: ApproveRefundRequest,
+    refund_repo: RefundRepository = Depends(get_refund_repository),
+    booking_repo: BookingRepository = Depends(get_booking_repository),
+    ticket_repo: TicketRepository = Depends(get_ticket_repository),
+    notification_service: ConsoleNotificationService = Depends(get_notification_service),
+):
+    """
+    US-16: Approve Refund
+    Event Organizer menyetujui permintaan refund.
+    Tiket terkait dibatalkan dan booking ditandai Refunded.
+    """
+    handler = ApproveRefundHandler(
+        refund_repository=refund_repo,
+        booking_repository=booking_repo,
+        ticket_repository=ticket_repo,
+        notification_service=notification_service,
+    )
+    command = ApproveRefundCommand(
+        refund_id=refund_id,
+        organizer_id=body.organizer_id,
+    )
+    try:
+        result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
