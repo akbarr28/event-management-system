@@ -17,6 +17,9 @@ from src.application.event.commands.create_ticket_category import CreateTicketCa
 from src.application.event.commands.create_ticket_category_handler import CreateTicketCategoryHandler
 from src.application.event.commands.disable_ticket_category import DisableTicketCategoryCommand
 from src.application.event.commands.disable_ticket_category_handler import DisableTicketCategoryHandler
+from typing import Optional
+from src.application.event.queries.get_available_events import GetAvailableEventsQuery
+from src.application.event.queries.get_available_events_handler import GetAvailableEventsHandler
 
 
 
@@ -170,6 +173,27 @@ async def disable_ticket_category(
     )
     try:
         result = await handler.handle(command)
+        return result
+    except DomainException as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+@router.get("/", status_code=200)
+async def get_available_events(
+    filter_date: Optional[datetime] = Query(default=None),
+    filter_location: Optional[str] = Query(default=None),
+    event_repo: EventRepository = Depends(get_event_repository),
+):
+    """
+    US-06: View Available Events
+    Customer melihat daftar event Published, bisa filter by date atau location.
+    """
+    handler = GetAvailableEventsHandler(event_repository=event_repo)
+    query = GetAvailableEventsQuery(
+        filter_date=filter_date,
+        filter_location=filter_location,
+    )
+    try:
+        result = await handler.handle(query)
         return result
     except DomainException as e:
         raise HTTPException(status_code=422, detail=str(e))
