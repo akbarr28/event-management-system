@@ -15,6 +15,9 @@ from src.application.booking.commands.pay_booking_handler import PayBookingHandl
 from src.infrastructure.repositories.ticket_repository import TicketRepository
 from src.application.booking.commands.expire_booking import ExpireBookingCommand
 from src.application.booking.commands.expire_booking_handler import ExpireBookingHandler
+from src.infrastructure.services.notification.notification_service import ConsoleNotificationService
+from src.infrastructure.services.payment.payment_gateway import ConsolePaymentGateway
+
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -34,6 +37,12 @@ async def get_ticket_repository(
     session: AsyncSession = Depends(get_db_session),
 ) -> TicketRepository:
     return TicketRepository(session)
+
+def get_payment_gateway() -> ConsolePaymentGateway:
+    return ConsolePaymentGateway()
+
+def get_notification_service() -> ConsoleNotificationService:
+    return ConsoleNotificationService()
 
 
 class PayBookingRequest(BaseModel):
@@ -105,16 +114,17 @@ async def pay_booking(
     booking_id: str,
     body: PayBookingRequest,
     booking_repo: BookingRepository = Depends(get_booking_repository),
+    event_repo: EventRepository = Depends(get_event_repository),
     ticket_repo: TicketRepository = Depends(get_ticket_repository),
+    payment_gateway: ConsolePaymentGateway = Depends(get_payment_gateway),
+    notification_service: ConsoleNotificationService = Depends(get_notification_service),
 ):
-    """
-    US-10: Pay Booking
-    Customer membayar booking dengan jumlah yang sesuai total price.
-    Setelah berhasil, ticket diterbitkan otomatis.
-    """
     handler = PayBookingHandler(
         booking_repository=booking_repo,
+        event_repository=event_repo,
         ticket_repository=ticket_repo,
+        payment_gateway=payment_gateway,
+        notification_service=notification_service,
     )
     command = PayBookingCommand(
         booking_id=booking_id,
